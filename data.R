@@ -1,14 +1,15 @@
 #installing libraries
-install.packages("forecast")
 install.packages("ggplot2")
 install.packages("lubridate")
 install.packages("GGally")
+install.packages("prophet")
+
 
 #loading libraries
-library("forecast")
 library("ggplot2")
 library("lubridate")
 library("GGally")
+library("prophet")
 
 #setting the working directory (it depends on your wd)
 setwd("C:/Users/marye/Documents/R")
@@ -41,7 +42,6 @@ sapply(train, function(x) sum(is.na(x)))
 # Descriptive statistics
 summary(train[, c("Price", "Open", "High", "Low", "Vol", "Change")])
 
-
 # Plot Bitcoin Closing Price over Time
 cp <- ggplot(train, aes(Date, Price)) + geom_line() + scale_x_date(date_breaks = "years", date_labels = "%Y" ,limits = as.Date(c("2010-07-18","2024-02-09"))) + ylab("Price ($)") + xlab("Year") + ylim(0,70000)
 cp + theme_bw() + labs(title="Bitcoin Price") + geom_line(size = 1, colour = "red")
@@ -58,41 +58,26 @@ summary(model)
 # Residuals vs Fitted Values Plot
 plot(model, which = 1)
 
-# Create forecast dataframe with dates
-forecast_dates <- seq.Date(max(train$Date) + 1, max(train$Date) + 30, by = "day")
+# Call the Prophet Function to Fit the Model
+colnames(train)[colnames(train) == "Date"] <- "ds"
+colnames(train)[colnames(train) == "Price"] <- "y"
 
-forecast_df <- data.frame(
-  Date = forecast_dates,
-  Open = rep(mean(train$Open, na.rm = TRUE), 30),  # Placeholder for Open prices
-  High = rep(mean(train$High, na.rm = TRUE), 30),  # Placeholder for High prices
-  Low = rep(mean(train$Low, na.rm = TRUE), 30),    # Placeholder for Low prices
-  Vol = rep(mean(train$Vol, na.rm = TRUE), 30),  # Placeholder for Volume
-  Change = rep(mean(train$Change, na.rm = TRUE), 30)  # Placeholder for Change %
-)
+Model <- prophet(train,daily.seasonality=TRUE)
+future <- make_future_dataframe(Model, periods = 365)
+tail(future)
 
-# Make sure forecast_df has the same column names as train
-colnames(forecast_df) <- colnames(train)
+#Forecast Proper
+forecast <- predict(Model, future)
+tail(forecast[c('ds','yhat','yhat_lower','yhat_upper')])
+max(train$y)
+class(forecast)
+View(forecast)
 
-# Predict using the linear regression model
-forecast_values <- predict(model, newdata = forecast_df)
+#Plotting the forecast
+dyplot.prophet(Model, forecast)
 
-# Add forecast values to forecast_df
-forecast_df$Forecast <- forecast_values
-
-# Plot forecast
-ggplot() +
-  geom_line(data = forecast_df, aes(x = Date, y = Forecast), color = "red") +
-  labs(title = "Linear Regression Forecast for Bitcoin Price",
-       x = "Date",
-       y = "Price") +
-  scale_x_date(limits = c(min(train$Date), max(forecast_df$Date)), 
-               date_breaks = "1 month", 
-               date_labels = "%b %Y", 
-               expand = c(0, 0)) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-
+#patterns in the data
+prophet_plot_components(Model, forecast)
 
 
 
