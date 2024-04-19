@@ -1,25 +1,16 @@
 #installing libraries
-install.packages("anytime")
-install.packages("xts")
-install.packages("ggfortify")
 install.packages("forecast")
-install.packages("quantmod")
 install.packages("ggplot2")
 install.packages("lubridate")
 install.packages("GGally")
 
-
 #loading libraries
-library("anytime")
-library("xts")
-library("ggfortify")
 library("forecast")
-library("quantmod")
 library("ggplot2")
 library("lubridate")
 library("GGally")
 
-#setting the working directory
+#setting the working directory (it depends on your wd)
 setwd("C:/Users/marye/Documents/R")
 
 #reading the data
@@ -30,7 +21,6 @@ head(train)
 summary(train$Price)
 View(train)
 str(train)
-
 
 #cleaning the data
 train$Price <- as.numeric(gsub(",", "", train$Price))
@@ -53,20 +43,20 @@ summary(train[, c("Price", "Open", "High", "Low", "Vol", "Change")])
 
 
 # Plot Bitcoin Closing Price over Time
-cp <- ggplot(train, aes(Date, Price)) + geom_line() + scale_x_date(date_breaks = "years", date_labels = "%Y" ,limits = as.Date(c("2010-07-18","2024-02-09"))) + ylab("Price ($)") + xlab("Year") + ylim(0,55000)
+cp <- ggplot(train, aes(Date, Price)) + geom_line() + scale_x_date(date_breaks = "years", date_labels = "%Y" ,limits = as.Date(c("2010-07-18","2024-02-09"))) + ylab("Price ($)") + xlab("Year") + ylim(0,70000)
 cp + theme_bw() + labs(title="Bitcoin Price") + geom_line(size = 1, colour = "red")
-
-# View summary of the model
-summary(model)
-
-# Residuals vs Fitted Values Plot
-plot(model, which = 1)
 
 # Scatterplot Matrix
 ggpairs(train[, c("Price", "Open", "High", "Low", "Vol", "Change")])
 
 # Simple Linear Regression
 model <- lm(Price ~ Open + High + Low + Vol + Change, data = train)
+
+# View summary of the model
+summary(model)
+
+# Residuals vs Fitted Values Plot
+plot(model, which = 1)
 
 # Create forecast dataframe with dates
 forecast_dates <- seq.Date(max(train$Date) + 1, max(train$Date) + 30, by = "day")
