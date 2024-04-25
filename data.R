@@ -1,83 +1,94 @@
-#installing libraries
-install.packages("ggplot2")
-install.packages("lubridate")
-install.packages("GGally")
-install.packages("prophet")
+# Install necessary libraries
+install.packages(c("ggplot2", "lubridate", "GGally", "prophet", "forecast", "dplyr", "tidyr"))
 
+# Load required libraries
+library(ggplot2)
+library(lubridate)
+library(GGally)
+library(prophet)
+library(forecast)
+library(dplyr)
+library(tidyr)
 
-#loading libraries
-library("ggplot2")
-library("lubridate")
-library("GGally")
-library("prophet")
+# Set the working directory (Adjust to your working directory)
+setwd("C:/Users/marye/Documents/R") 
 
-#setting the working directory (it depends on your wd)
-setwd("C:/Users/marye/Documents/R")
+# Read the dataset
+data <- read.csv("data.csv", header = TRUE)
 
-#reading the data
-train <- read.csv("data.csv",header=TRUE)
+# Convert to appropriate data types
+data$Date <- mdy(data$Date)  # Convert Date
+data$Price <- as.numeric(gsub(",", "", data$Price))  # Convert Price to numeric
+data$Open <- as.numeric(gsub(",", "", data$Open))  # Convert Open to numeric
+data$High <- as.numeric(gsub(",", "", data$High))  # Convert High to numeric
+data$Low <- as.numeric(gsub(",", "", data$Low))  # Convert Low to numeric
+data$Vol <- as.numeric(gsub("K", "", data$Vol)) * 1000  # Convert Volume to numeric
+data$Change <- as.numeric(gsub("%", "", data$Change)) / 100  # Convert Change to decimal
 
-#viewing the data
-head(train)
-summary(train$Price)
-View(train)
-str(train)
+# Check for missing data
+missing_values <- sapply(data, function(x) sum(is.na(x)))
+print(missing_values)
 
-#cleaning the data
-train$Price <- as.numeric(gsub(",", "", train$Price))
-train$Open <- as.numeric(gsub(",", "", train$Open))
-train$High <- as.numeric(gsub(",", "", train$High))
-train$Low <- as.numeric(gsub(",", "", train$Low))
-train$Price <- as.numeric(train$Price)
-train$Date <- mdy(train$Date)
-train$Change <- as.numeric(gsub("%", "", train$Change))
-train$Change <- train$Change/100
-train$Vol <- as.numeric(gsub("K", "", train$Vol))*1000
-train$Vol. <- NULL
-train$Change.. <- NULL
+# Handling missing values by removing rows with NA
+data <- na.omit(data)
 
-# Check for missing values in each column
-sapply(train, function(x) sum(is.na(x)))
+#Viewing the data
+head(data)
+View(data)
 
 # Descriptive statistics
-summary(train[, c("Price", "Open", "High", "Low", "Vol", "Change")])
+summary(data[, c("Price", "Open", "High", "Low", "Vol", "Change")])
 
-# Plot Bitcoin Closing Price over Time
-cp <- ggplot(train, aes(Date, Price)) + geom_line() + scale_x_date(date_breaks = "years", date_labels = "%Y" ,limits = as.Date(c("2010-07-18","2024-02-09"))) + ylab("Price ($)") + xlab("Year") + ylim(0,70000)
-cp + theme_bw() + labs(title="Bitcoin Price") + geom_line(size = 1, colour = "red")
+# Detecting outliers with boxplots
+boxplot(data[, c("Price", "Open", "High", "Low", "Vol", "Change")], main = "Outlier Detection")
 
-# Scatterplot Matrix
-ggpairs(train[, c("Price", "Open", "High", "Low", "Vol", "Change")])
+# Correlation matrix with visualizations
+ggpairs(data[, c("Price", "Open", "High", "Low", "Vol", "Change")], title = "Correlation Matrix")
 
-# Simple Linear Regression
-model <- lm(Price ~ Open + High + Low + Vol + Change, data = train)
+# Bitcoin price over time
+ggplot(data, aes(x = Date, y = Price)) +
+  geom_line() +
+  scale_x_date(date_breaks = "years", date_labels = "%Y") +
+  ylim(0, 70000) +
+  theme_minimal() +
+  ggtitle("Bitcoin Price Over Time")
 
-# View summary of the model
-summary(model)
+# Box plots for key metrics
+ggplot(data, aes(y = Price)) +
+  geom_boxplot() +
+  ggtitle("Boxplot for Bitcoin Price")
 
-# Residuals vs Fitted Values Plot
-plot(model, which = 1)
+# Histogram 
+ggplot(data, aes(x = Price)) +
+  geom_histogram(bins = 30, fill = "blue", color = "white") +
+  ggtitle("Histogram of Bitcoin Price")
 
-# Call the Prophet Function to Fit the Model
-colnames(train)[colnames(train) == "Date"] <- "ds"
-colnames(train)[colnames(train) == "Price"] <- "y"
+# Density plots
+ggplot(data, aes(x = Price)) +
+  geom_density(fill = "green") +
+  ggtitle("Density Plot of Bitcoin Price")
 
-Model <- prophet(train,daily.seasonality=TRUE)
-future <- make_future_dataframe(Model, periods = 365)
-tail(future)
+# Fitting the data with Prophet model
+colnames(data)[colnames(data) == "Date"] <- "ds"
+colnames(data)[colnames(data) == "Price"] <- "y"
 
-#Forecast Proper
-forecast <- predict(Model, future)
-tail(forecast[c('ds','yhat','yhat_lower','yhat_upper')])
-max(train$y)
-class(forecast)
-View(forecast)
+# Fitting the model
+model_prophet <- prophet(data, daily.seasonality = TRUE)
+future_dates <- make_future_dataframe(model_prophet, periods = 365)
+forecast <- predict(model_prophet, future_dates)
 
-#Plotting the forecast
-dyplot.prophet(Model, forecast)
+# Viewing the forecast
+plot(model_prophet, forecast) +
+  ggtitle("Forecasted Bitcoin Price with Prophet") +
+  xlab("Date") +
+  ylab("Predicted Price")
 
-#patterns in the data
-prophet_plot_components(Model, forecast)
+# Viewing the interactive forecast
+dyplot.prophet(model_prophet, forecast)
+
+# Viewing patterns in the data
+prophet_plot_components(model_prophet, forecast)
+
 
 
 
